@@ -1,17 +1,13 @@
 {
-  "name": "fhevm-hardhat-template",
-  "description": "Hardhat-based template for developing FHEVM Solidity smart contracts",
+  "name": "hardhat",
+  "description": "Hardhat package for developing FHEVM Solidity smart contracts",
   "version": "0.4.1",
+  "private": true,
   "engines": {
     "node": ">=20",
-    "npm": ">=7.0.0"
+    "pnpm": ">=7.0.0"
   },
   "license": "BSD-3-Clause-Clear",
-  "homepage": "https://github.com/zama-ai/fhevm-hardhat-template/README.md",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/zama-ai/fhevm-hardhat-template.git"
-  },
   "keywords": [
     "fhevm",
     "zama",
