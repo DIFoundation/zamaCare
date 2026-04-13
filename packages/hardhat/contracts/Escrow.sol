@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
-import {FHE, euint32, ebool, inEuint32, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
+import {FHE, euint32, ebool, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
 import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 
 interface IMarketplace {
@@ -41,8 +41,10 @@ contract Escrow is ZamaEthereumConfig {
         uint256 orderId;
         address buyer;
         address seller;
-        uint256 amount;
+        uint256 amount;           // used for transfer (plaintext)
+        euint32 eAmount;          // encrypted version
         uint256 productId;
+        // euint32 eProductId;    // OPTIONAL
         EscrowStatus status;
         uint256 createdAt;
         uint256 disputeRaisedAt;
@@ -134,12 +136,15 @@ contract Escrow is ZamaEthereumConfig {
         escrowCounter++;
         uint256 escrowId = escrowCounter;
 
+        euint32 encryptedAmount = FHE.asEuint32(uint32(msg.value));
+
         escrows[escrowId] = EscrowData({
             id: escrowId,
             orderId: _orderId,
             buyer: _buyer,
             seller: _seller,
             amount: msg.value,
+            eAmount: encryptedAmount,
             productId: _productId,
             status: EscrowStatus.PENDING,
             createdAt: block.timestamp,
@@ -284,6 +289,12 @@ contract Escrow is ZamaEthereumConfig {
         uint256 _escrowId
     ) external view returns (EscrowData memory) {
         return escrows[_escrowId];
+    }
+
+    function getEncryptedAmount(
+        uint256 _escrowId
+    ) external view returns (euint32) {
+        return escrows[_escrowId].eAmount;
     }
 
     /**
