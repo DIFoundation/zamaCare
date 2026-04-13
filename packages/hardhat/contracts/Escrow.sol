@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {FHE, euint32, ebool, inEuint32, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
+import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
+
 interface IMarketplace {
     function onDisputeResolved(uint256 _escrowId, bool releasedToSeller) external;
 }
@@ -10,7 +13,7 @@ interface IMarketplace {
  * @notice Trustless payment escrow for marketplace transactions
  * @dev Handles fund locking, release to seller, refunds to buyer, and dispute resolution
  */
-contract Escrow {
+contract Escrow is ZamaEthereumConfig {
     // ============ Errors ============
     error Escrow__NotAuthorized();
     error Escrow__EscrowNotFound();

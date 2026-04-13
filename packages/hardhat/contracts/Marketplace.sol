@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import {FHE, euint32, externalEuint32} from "@fhevm/solidity/lib/FHE.sol";
+import {ZamaEthereumConfig} from "@fhevm/solidity/config/ZamaConfig.sol";
 import {Escrow} from "./Escrow.sol";
 
 /**
@@ -8,7 +10,7 @@ import {Escrow} from "./Escrow.sol";
  * @notice Decentralized multi-vendor marketplace for listing and purchasing products
  * @dev Handles seller registration, product management, and order creation
  */
-contract Marketplace {
+contract Marketplace is ZamaEthereumConfig {
     // ============ Errors ============
     error Marketplace__NotSeller();
     error Marketplace__AlreadySeller();
