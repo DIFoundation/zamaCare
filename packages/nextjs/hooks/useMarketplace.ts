@@ -8,6 +8,7 @@ import {
 } from "wagmi";
 import { parseEther, type Address } from "viem";
 import deployedContracts from "~~/contracts/deployedContracts";
+import { debounceAsync } from "~~/utils/helper/debounce";
 
 
 import { parseAbi } from "viem";
@@ -77,7 +78,7 @@ export function useMarketplace() {
       abi: contract.abi,
       functionName: "getProducts",
       args: [productIds],
-      query: { enabled: productIds.length > 0 },
+      query: { enabled: Number(productIds) > 0 },
     });
  
   /** Single product from the products mapping */
@@ -190,8 +191,11 @@ export function useMarketplace() {
    * @param description - store description
    */
   const registerSeller = useCallback(
-    (storeName: string, description: string) =>
-      send("registerSeller", [storeName, description]),
+    debounceAsync(
+      (storeName: string, description: string) =>
+        send("registerSeller", [storeName, description]),
+      1000 // 1 second debounce
+    ),
     [send]
   );
  

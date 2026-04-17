@@ -8,6 +8,14 @@ import { BaseError as BaseViemError, ContractFunctionRevertedError } from "viem"
 export const getParsedError = (error: any): string => {
   const parsedError = error?.walk ? error.walk() : error;
 
+  // Check for rate limit errors (429)
+  if (parsedError?.message?.includes('429') || 
+      parsedError?.details?.includes('429') || 
+      parsedError?.shortMessage?.includes('429') ||
+      parsedError?.message?.includes('Too Many Requests')) {
+    return "Rate limit exceeded. Please wait a moment and try again. The RPC provider is limiting requests.";
+  }
+
   if (parsedError instanceof BaseViemError) {
     if (parsedError.details) {
       return parsedError.details;

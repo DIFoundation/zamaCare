@@ -35,10 +35,13 @@ if (!rawWalletConnectProjectId) {
 const scaffoldConfig = {
   targetNetworks: [chains.sepolia],
   // The interval at which your front-end polls the RPC servers for new data
-  pollingInterval: 30000,
+  pollingInterval: 60000,
   // Get your own Etherscan API key at https://etherscan.io/apis
   // Store it in .env.local for local testing
   etherscanKey: rawEtherscanKey || "", // Keep this name for compatibility
+  rpcOverrides: {
+    [chains.sepolia.id]: "https://gateway.tenderly.co/public/sepolia"
+  },
   walletConnectProjectId: rawWalletConnectProjectId || "c1362a4b534f96512c03c786cf8314fc",
 } as const satisfies ScaffoldConfig;
 

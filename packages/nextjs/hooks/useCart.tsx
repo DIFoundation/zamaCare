@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Cart, CartItem } from '~~/types';
 import { useMarketplace } from '~~/hooks/useMarketplace';
-import { useConnection } from 'wagmi';
+import { useAccount } from 'wagmi';
 
 export const CartContext = React.createContext<{
   cart: Cart;
@@ -42,7 +42,7 @@ export function useProductFetcher() {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { address, isConnected } = useConnection();
+  const { address, isConnected } = useAccount();
   const { product } = useProductFetcher();
   
   const [cart, setCart] = useState<Cart>({

@@ -13,10 +13,12 @@ import { Address } from 'viem';
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
 
-  const { reads: { useIsSeller, useSeller, useSellerProducts, useBuyerOrders, useSellerOrders, useProductCount, useProducts } } = useMarketplaceHook();
-  const { reads: { useBuyerEscrows, useSellerEscrows, useOwner } } = useEscrowHook();
+  const { reads: { useIsSeller, useSeller, useSellerProducts, useBuyerOrders, useSellerOrders, useProductCount, useProducts, useOwner: useMarketplaceOwner } } = useMarketplaceHook();
+  const { reads: { useBuyerEscrows, useSellerEscrows, useOwner: useEscrowOwner } } = useEscrowHook();
 
-  const userRole = useOwner() ? 'ADMIN' : useIsSeller(address as Address) ? 'SELLER' : 'BUYER';
+  const userRole = useMarketplaceOwner().data === address && useEscrowOwner().data === address 
+    ? 'ADMIN' : (useIsSeller(address as Address)?.data === true) 
+    ? 'SELLER' : 'BUYER';
   const seller = useSeller(address as Address)
   const sellerProducts = useSellerProducts(address as Address)
   const buyerOrders = useBuyerOrders(address as Address)
@@ -36,11 +38,11 @@ export default function Dashboard() {
   const getRoleTabs = () => {
     switch (userRole) {
       case 'ADMIN':
-        return ['escrows', 'disputes', 'settings'];
+        return ['escrows', 'disputes', 'seller', 'orders', 'settings', 'emergency'];
       case 'SELLER':
         return ['products', 'orders', 'escrows', 'store'];
       case 'BUYER':
-        return ['orders', 'escrows'];
+        return ['orders', 'escrows', 'settings'];
       default:
         return ['overview'];
     }
@@ -98,17 +100,13 @@ export default function Dashboard() {
       case 'BUYER':
         return (
           <BuyerDashboard
-            buyerOrders={buyerOrders}
-            buyerEscrows={buyerEscrows}
-            allProducts={allProducts}
+            activeTab={activeTab}
           />
         );
       default:
         return (
           <BuyerDashboard
-            buyerOrders={buyerOrders}
-            buyerEscrows={buyerEscrows}
-            allProducts={allProducts}
+            activeTab={activeTab}
           />
         );
     }

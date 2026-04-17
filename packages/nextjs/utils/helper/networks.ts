@@ -42,9 +42,7 @@ export const getEtherscanHttpUrl = (chainId: number) => {
   
   // log chain name to get it quickly incase needed
   console.log('chain name', chainName)
-  return scaffoldConfig.etherscanKey 
-    ? `https://api.etherscan.io/v2/api`
-    : `https://api.etherscan.io/v2/api`;
+  return `https://api.etherscan.io/v2/api/`;
 };
 
 export const NETWORKS_EXTRA_DATA: Record<string, ChainAttributes> = {
