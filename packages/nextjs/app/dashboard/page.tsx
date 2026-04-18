@@ -46,7 +46,7 @@ export default function Dashboard() {
       case 'SELLER':
         return ['products', 'orders', 'escrows', 'store'];
       case 'BUYER':
-        return ['orders', 'escrows', 'settings'];
+        return ['overview', 'orders', 'escrows', 'settings'];
       default:
         return ['overview'];
     }

@@ -55,29 +55,50 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
   const buyerOrders = useBuyerOrders(address || '0x');
   const buyerEscrows = useBuyerEscrows(address || '0x');
   const productCount = useProductCount();
-
+  
   const productIds = Array.from({ length: Number(productCount) }, (_, i) => i + 1);
 
   const allProducts = useProducts(productIds.map(id => BigInt(id)));
   const selectedProduct = useProduct(selectedProductId ? BigInt(selectedProductId) : BigInt(0));
 
-  // Mock data for demonstration
-  const mockOrders = [
-    { id: '1', productId: '101', quantity: '2', totalAmount: '2000000000000000000', status: 1, createdAt: Date.now() / 1000, seller: '0x3333...4444' },
-    { id: '2', productId: '102', quantity: '1', totalAmount: '1500000000000000000', status: 2, createdAt: Date.now() / 1000, seller: '0x7777...8888' },
-    { id: '3', productId: '103', quantity: '3', totalAmount: '4500000000000000000', status: 0, createdAt: Date.now() / 1000, seller: '0xaaaa...bbbb' },
-  ];
+  // Transform real data from hooks to usable format
+  const orders = Array.isArray(buyerOrders.data) ? buyerOrders.data.map(order => ({
+    id: order[0] || '0',
+    productId: order[1]?.toString() || '0',
+    buyer: order[2] || '0x0000...0000',
+    seller: order[3] || '0x0000...0000',
+    quantity: order[4]?.toString() || '0',
+    totalAmount: order[5]?.toString() || '0',
+    shippingAddress: order[6] || '',
+    status: Number(order[7]) || 0,
+    createdAt: Number(order[8]) || Date.now() / 1000,
+    escrowId: order[9]?.toString() || '0'
+  })) : [];
 
-  const mockEscrows = [
-    { id: '1', buyer: address, seller: '0x3333...4444', amount: '2000000000000000000', status: 1, createdAt: Date.now() / 1000, disputeRaised: false },
-    { id: '2', buyer: address, seller: '0x7777...8888', amount: '1500000000000000000', status: 2, createdAt: Date.now() / 1000, disputeRaised: false },
-  ];
+  const escrows = Array.isArray(buyerEscrows) ? buyerEscrows.map(escrow => ({
+    id: escrow.id?.toString() || '0',
+    orderId: escrow.orderId?.toString() || '0',
+    buyer: escrow.buyer || address,
+    seller: escrow.seller || '0x0000...0000',
+    amount: escrow.amount?.toString() || '0',
+    productId: escrow.productId?.toString() || '0',
+    status: Number(escrow.status) || 0,
+    createdAt: Number(escrow.createdAt) || Date.now() / 1000,
+    disputeRaised: escrow.disputeRaised || false,
+    disputeResolved: escrow.disputeResolved || false,
+  })) : [];
 
-  const mockProducts = [
-    { id: '101', name: 'Laptop Pro', description: 'High-performance laptop', price: '1000000000000000000', stock: '10', seller: '0x3333...4444', isActive: true },
-    { id: '102', name: 'Wireless Mouse', description: 'Ergonomic wireless mouse', price: '150000000000000000', stock: '50', seller: '0x7777...8888', isActive: true },
-    { id: '103', name: 'USB-C Hub', description: 'Multi-port USB hub', price: '1500000000000000000', stock: '25', seller: '0xaaaa...bbbb', isActive: true },
-  ];
+  const products = Array.isArray(allProducts) ? allProducts.map(product => ({
+    id: product.id?.toString() || '0',
+    seller: product.seller || '0x0000...0000',
+    name: product.name || 'Unknown Product',
+    description: product.description || '',
+    price: product.price?.toString() || '0',
+    stock: product.stock?.toString() || '0',
+    ipfsHash: product.ipfsHash || '',
+    isActive: product.isActive || false,
+    createdAt: Number(product.createdAt) || Date.now() / 1000
+  })) : [];
 
   const handleRaiseDispute = async (escrowId: string) => {
     setLoading(true);
@@ -127,17 +148,17 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
     <div className="space-y-6">
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="My Orders" value={mockOrders.length.toString()} icon="🛒" />
-        <StatCard title="Escrow Transactions" value={mockEscrows.length.toString()} icon="🔄" />
-        <StatCard title="Available Products" value={mockProducts.length.toString()} icon="📦" />
-        <StatCard title="Total Spent" value={`${mockOrders.reduce((sum, order) => sum + Number(formatEther(BigInt(order.totalAmount))), 0).toFixed(4)} ETH`} icon="💰" />
+        <StatCard title="My Orders" value={orders.length.toString()} icon="🛒" />
+        <StatCard title="Escrow Transactions" value={escrows.length.toString()} icon="🔄" />
+        <StatCard title="Available Products" value={products.length.toString()} icon="📦" />
+        <StatCard title="Total Spent" value={`${orders.reduce((sum, order) => sum + Number(formatEther(BigInt(order.totalAmount))), 0).toFixed(4)} ETH`} icon="💰" />
       </div>
 
       {/* Recent Orders */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h3>
         <div className="space-y-3">
-          {mockOrders.slice(0, 3).map((order) => (
+          {orders.slice(0, 3).map((order) => (
             <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -165,7 +186,7 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
               </div>
             </div>
           ))}
-          {mockOrders.length === 0 && (
+          {orders.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <span className="text-4xl mb-2 block">🛒</span>
               <p>No orders yet</p>
@@ -185,20 +206,20 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-sm font-medium text-blue-600">Total Orders</p>
-            <p className="text-2xl font-bold text-blue-900">{mockOrders.length}</p>
+            <p className="text-2xl font-bold text-blue-900">{orders.length}</p>
           </div>
           <div className="bg-yellow-50 rounded-lg p-4">
             <p className="text-sm font-medium text-yellow-600">Pending</p>
-            <p className="text-2xl font-bold text-yellow-900">{mockOrders.filter(o => o.status === 0).length}</p>
+            <p className="text-2xl font-bold text-yellow-900">{orders.filter(o => o.status === 0).length}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4">
             <p className="text-sm font-medium text-green-600">Completed</p>
-            <p className="text-2xl font-bold text-green-900">{mockOrders.filter(o => o.status === 3).length}</p>
+            <p className="text-2xl font-bold text-green-900">{orders.filter(o => o.status === 3).length}</p>
           </div>
           <div className="bg-purple-50 rounded-lg p-4">
             <p className="text-sm font-medium text-purple-600">Total Spent</p>
             <p className="text-2xl font-bold text-purple-900">
-              {mockOrders.reduce((sum, order) => sum + Number(formatEther(BigInt(order.totalAmount))), 0).toFixed(4)} ETH
+              {orders.reduce((sum, order) => sum + Number(formatEther(BigInt(order.totalAmount))), 0).toFixed(4)} ETH
             </p>
           </div>
         </div>
@@ -221,13 +242,13 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {mockOrders.map((order) => (
+              {orders.map((order) => (
                 <tr key={order.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     #{order.id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {mockProducts.find(p => p.id === order.productId)?.name || `Product ${order.productId}`}
+                    {products.find(p => p.id === order.productId)?.name || `Product ${order.productId}`}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {order.seller}
@@ -289,16 +310,16 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-sm font-medium text-blue-600">Total Escrows</p>
-            <p className="text-2xl font-bold text-blue-900">{mockEscrows.length}</p>
+            <p className="text-2xl font-bold text-blue-900">{escrows.length}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4">
             <p className="text-sm font-medium text-green-600">Active</p>
-            <p className="text-2xl font-bold text-green-900">{mockEscrows.filter(e => e.status === 1).length}</p>
+            <p className="text-2xl font-bold text-green-900">{escrows.filter(e => e.status === 1).length}</p>
           </div>
           <div className="bg-purple-50 rounded-lg p-4">
             <p className="text-sm font-medium text-purple-600">Total Value</p>
             <p className="text-2xl font-bold text-purple-900">
-              {mockEscrows.reduce((sum, escrow) => sum + Number(formatEther(BigInt(escrow.amount))), 0).toFixed(4)} ETH
+              {escrows.reduce((sum, escrow) => sum + Number(formatEther(BigInt(escrow.amount))), 0).toFixed(4)} ETH
             </p>
           </div>
         </div>
@@ -321,7 +342,7 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {mockEscrows.map((escrow) => (
+              {escrows.map((escrow) => (
                 <tr key={escrow.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     #{escrow.id}
