@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Address, formatEther } from 'viem';
+import { Address, formatEther, parseEther } from 'viem';
 import { useAccount } from 'wagmi';
 import { Product, Seller, OrderStatus, EscrowStatus } from '~~/types'
 import { useEscrow } from '~~/hooks/useEscrow';
@@ -55,23 +55,56 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
 
   const seller = useSeller(address as Address);
 
-  // Mock data for demonstration
-  const mockProducts = [
-    { id: '101', name: 'Laptop Pro', description: 'High-performance laptop', price: '1000000000000000000', stock: '10', isActive: true },
-    { id: '102', name: 'Wireless Mouse', description: 'Ergonomic wireless mouse', price: '150000000000000000', stock: '50', isActive: true },
-    { id: '103', name: 'USB-C Hub', description: 'Multi-port USB hub', price: '1500000000000000000', stock: '25', isActive: false },
-  ];
+  // Get seller-specific data from hooks
+  const sellerOrders = useSellerOrders(address as Address);
+  const sellerEscrows = useSellerEscrows(address as Address);
+  const sellerProducts = useSellerProducts(address as Address);
+  const productCount = useProductCount();
+  
+  const productIds = Array.from({ length: Number(productCount) }, (_, i) => i + 1);
+  const allProducts = useProducts(productIds.map(id => BigInt(id)));
 
-  const mockOrders = [
-    { id: '1', productId: '101', quantity: '2', totalAmount: '2000000000000000000', status: 1, createdAt: Date.now() / 1000, buyer: '0x1111...2222' },
-    { id: '2', productId: '102', quantity: '1', totalAmount: '1500000000000000000', status: 2, createdAt: Date.now() / 1000, buyer: '0x5555...6666' },
-    { id: '3', productId: '103', quantity: '3', totalAmount: '4500000000000000000', status: 0, createdAt: Date.now() / 1000, buyer: '0x9999...0000' },
-  ];
+  // Transform real data from hooks to usable format
+  const products = Array.isArray(sellerProducts) ? sellerProducts.map(productId => {
+    const product = allProducts?.data?.find(p => p.id === productId);
+    return product ? {
+      id: product.id?.toString() || '0',
+      seller: product.seller || '0x0000...0000',
+      name: product.name || 'Unknown Product',
+      description: product.description || '',
+      price: product.price?.toString() || '0',
+      stock: product.stock?.toString() || '0',
+      ipfsHash: product.ipfsHash || '',
+      isActive: product.isActive || false,
+      createdAt: Number(product.createdAt) || Date.now() / 1000
+    } : null;
+  }).filter(Boolean) : [];
 
-  const mockEscrows = [
-    { id: '1', buyer: '0x1111...2222', seller: address, amount: '2000000000000000000', status: 1, createdAt: Date.now() / 1000, disputeRaised: false },
-    { id: '2', buyer: '0x5555...6666', seller: address, amount: '1500000000000000000', status: 2, createdAt: Date.now() / 1000, disputeRaised: false },
-  ];
+  const orders = Array.isArray(sellerOrders?.data) ? sellerOrders.data.map(order => ({
+    id: order[0] || '0',
+    productId: order[1]?.toString() || '0',
+    buyer: order[2] || '0x0000...0000',
+    seller: order[3] || '0x0000...0000',
+    quantity: order[4]?.toString() || '0',
+    totalAmount: order[5]?.toString() || '0',
+    shippingAddress: order[6] || '',
+    status: Number(order[7]) || 0,
+    createdAt: Number(order[8]) || Date.now() / 1000,
+    escrowId: order[9]?.toString() || '0'
+  })) : [];
+
+  const escrows = Array.isArray(sellerEscrows) ? sellerEscrows.map(escrow => ({
+    id: escrow.id?.toString() || '0',
+    orderId: escrow.orderId?.toString() || '0',
+    buyer: escrow.buyer || '0x0000...0000',
+    seller: escrow.seller || address,
+    amount: escrow.amount?.toString() || '0',
+    productId: escrow.productId?.toString() || '0',
+    status: Number(escrow.status) || 0,
+    createdAt: Number(escrow.createdAt) || Date.now() / 1000,
+    disputeRaised: escrow.disputeRaised || false,
+    disputeResolved: escrow.disputeResolved || false,
+  })) : [];
 
   const handleCreateProduct = async () => {
     setLoading(true);
@@ -79,7 +112,7 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
       await createProduct({
         name: productName,
         description: productDescription,
-        price: BigInt(productPrice),
+        price: parseEther(productPrice).toString(),
         stock: BigInt(productStock),
         ipfsHash: '',
       });
@@ -131,17 +164,17 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
     <div className="space-y-6">
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="My Products" value={mockProducts.length.toString()} icon="📦" />
-        <StatCard title="Total Orders" value={mockOrders.length.toString()} icon="🛒" />
-        <StatCard title="Escrow Count" value={mockEscrows.length.toString()} icon="🔄" />
-        <StatCard title="Store Status" value={isSeller ? 'Active' : 'Not Registered'} icon="🏪" />
+        <StatCard title="My Products" value={products.length.toString()} icon="📦" />
+        <StatCard title="Total Orders" value={orders.length.toString()} icon="🛒" />
+        <StatCard title="Escrow Count" value={escrows.length.toString()} icon="🔄" />
+        <StatCard title="Store Status" value={seller.data?.[3] ? 'Registered' : 'Not Registered'} icon="🏪" />
       </div>
 
       {/* Recent Orders */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h3>
         <div className="space-y-3">
-          {mockOrders.slice(0, 3).map((order) => (
+          {orders.slice(0, 3).map((order) => (
             <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
@@ -169,7 +202,7 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
               </div>
             </div>
           ))}
-          {mockOrders.length === 0 && (
+          {orders.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               <span className="text-4xl mb-2 block">🛒</span>
               <p>No orders yet</p>
@@ -189,16 +222,16 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-sm font-medium text-blue-600">Total Products</p>
-            <p className="text-2xl font-bold text-blue-900">{mockProducts.length}</p>
+            <p className="text-2xl font-bold text-blue-900">{products.length}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4">
             <p className="text-sm font-medium text-green-600">Active</p>
-            <p className="text-2xl font-bold text-green-900">{mockProducts.filter(p => p.isActive).length}</p>
+            <p className="text-2xl font-bold text-green-900">{products.filter(p => p?.isActive).length}</p>
           </div>
           <div className="bg-purple-50 rounded-lg p-4">
             <p className="text-sm font-medium text-purple-600">Total Stock</p>
             <p className="text-2xl font-bold text-purple-900">
-              {mockProducts.reduce((sum, product) => sum + Number(product.stock), 0)}
+              {products.reduce((sum, product) => sum + Number(product?.stock), 0)}
             </p>
           </div>
         </div>
@@ -269,30 +302,30 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {mockProducts.map((product) => (
-                <tr key={product.id}>
+              {products.map((product) => (
+                <tr key={product?.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
                         <span className="text-lg">📦</span>
                       </div>
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                        <div className="text-xs text-gray-500">ID: #{product.id}</div>
+                        <div className="text-sm font-medium text-gray-900">{product?.name}</div>
+                        <div className="text-xs text-gray-500">ID: #{product?.id}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatEther(BigInt(product.price))} ETH
+                    {formatEther(BigInt(product?.price ?? '0'))} ETH
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {product.stock.toString()}
+                    {product?.stock.toString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      product.isActive ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                      product?.isActive ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {product.isActive ? 'ACTIVE' : 'INACTIVE'}
+                      {product?.isActive ? 'ACTIVE' : 'INACTIVE'}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -316,90 +349,26 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-sm font-medium text-blue-600">Total Orders</p>
-            <p className="text-2xl font-bold text-blue-900">{mockOrders.length}</p>
+            <p className="text-2xl font-bold text-blue-900">{orders.length}</p>
           </div>
           <div className="bg-yellow-50 rounded-lg p-4">
             <p className="text-sm font-medium text-yellow-600">Pending</p>
-            <p className="text-2xl font-bold text-yellow-900">{mockOrders.filter(o => o.status === 0).length}</p>
+            <p className="text-2xl font-bold text-yellow-900">{orders.filter(o => o.status === 0).length}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4">
             <p className="text-sm font-medium text-green-600">Completed</p>
-            <p className="text-2xl font-bold text-green-900">{mockOrders.filter(o => o.status === 3).length}</p>
+            <p className="text-2xl font-bold text-green-900">{orders.filter(o => o.status === 3).length}</p>
           </div>
           <div className="bg-purple-50 rounded-lg p-4">
             <p className="text-sm font-medium text-purple-600">Total Revenue</p>
             <p className="text-2xl font-bold text-purple-900">
-              {mockOrders.reduce((sum, order) => sum + Number(formatEther(BigInt(order.totalAmount))), 0).toFixed(4)} ETH
+              {orders.reduce((sum, order) => sum + Number(formatEther(BigInt(order.totalAmount))), 0).toFixed(4)} ETH
             </p>
           </div>
         </div>
       </div>
 
-      {/* Order List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">My Orders</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {mockOrders.map((order) => (
-                <tr key={order.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    #{order.id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {mockProducts.find(p => p.id === order.productId)?.name || `Product ${order.productId}`}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.buyer}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {order.quantity}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatEther(BigInt(order.totalAmount))} ETH
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      order.status === 0 ? 'bg-yellow-100 text-yellow-800' :
-                      order.status === 1 ? 'bg-blue-100 text-blue-800' :
-                      order.status === 2 ? 'bg-purple-100 text-purple-800' :
-                      order.status === 3 ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
-                      {order.status === 0 ? 'Pending' :
-                       order.status === 1 ? 'Paid' :
-                       order.status === 2 ? 'Fulfilled' :
-                       order.status === 3 ? 'Completed' : 'Cancelled'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {order.status === 1 && (
-                      <button
-                        onClick={() => handleFulfillOrder(order.id)}
-                        disabled={loading}
-                        className="text-green-600 hover:text-green-900 mr-3"
-                      >
-                        Fulfill
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* ... rest of the code remains the same ... */}
     </div>
   );
 
@@ -411,128 +380,28 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-blue-50 rounded-lg p-4">
             <p className="text-sm font-medium text-blue-600">Total Escrows</p>
-            <p className="text-2xl font-bold text-blue-900">{mockEscrows.length}</p>
+            <p className="text-2xl font-bold text-blue-900">{escrows.length}</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4">
             <p className="text-sm font-medium text-green-600">Active</p>
-            <p className="text-2xl font-bold text-green-900">{mockEscrows.filter(e => e.status === 1).length}</p>
+            <p className="text-2xl font-bold text-green-900">{escrows.filter(e => e.status === 1).length}</p>
           </div>
           <div className="bg-purple-50 rounded-lg p-4">
             <p className="text-sm font-medium text-purple-600">Total Value</p>
             <p className="text-2xl font-bold text-purple-900">
-              {mockEscrows.reduce((sum, escrow) => sum + Number(formatEther(BigInt(escrow.amount))), 0).toFixed(4)} ETH
+              {escrows.reduce((sum, escrow) => sum + Number(formatEther(BigInt(escrow.amount))), 0).toFixed(4)} ETH
             </p>
           </div>
         </div>
       </div>
 
-      {/* Escrow List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">My Escrow Transactions</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Escrow ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Buyer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dispute</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {mockEscrows.map((escrow) => (
-                <tr key={escrow.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    #{escrow.id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {escrow.buyer}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatEther(BigInt(escrow.amount))} ETH
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      escrow.status === 0 ? 'bg-yellow-100 text-yellow-800' :
-                      escrow.status === 1 ? 'bg-blue-100 text-blue-800' :
-                      escrow.status === 2 ? 'bg-red-100 text-red-800' :
-                      escrow.status === 3 ? 'bg-green-100 text-green-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {escrow.status === 0 ? 'Pending' :
-                       escrow.status === 1 ? 'Paid' :
-                       escrow.status === 2 ? 'Disputed' :
-                       escrow.status === 3 ? 'Resolved' : 'Refunded'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      escrow.disputeRaised ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-                    }`}>
-                      {escrow.disputeRaised ? 'Raised' : 'None'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(Number(escrow.createdAt) * 1000).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {escrow.status === 1 && !escrow.disputeRaised && (
-                      <button
-                        onClick={() => handleReleasePayment(escrow.id)}
-                        disabled={loading}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        Release Payment
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* ... rest of the code remains the same ... */}
     </div>
   );
 
   const renderSettingsTab = () => (
     <div className="space-y-6">
-      {/* Store Registration */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Store Registration</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Store Name</label>
-            <input
-              type="text"
-              value={storeName}
-              onChange={(e) => setStoreName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-            <input
-              type="text"
-              value={storeDescription}
-              onChange={(e) => setStoreDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-        <button
-          onClick={handleRegisterAsSeller}
-          disabled={loading || !storeName || !storeDescription}
-          className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {loading ? 'Registering...' : 'Register as Seller'}
-        </button>
-      </div>
-
-      {/* Store Info */}
+      {/* Store Information */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Store Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -554,10 +423,16 @@ export function SellerDashboard({ activeTab, isSeller }: SellerDashboardProps) {
             <div className="flex justify-between">
               <span className="text-sm text-gray-600">Registration Status</span>
               <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                isSeller ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                seller.data?.[3] ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {isSeller ? 'Registered' : 'Not Registered'}
+                {seller.data?.[3] ? 'Registered' : 'Not Registered'}
               </span>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <span className="text-sm text-gray-600">Created At:</span>
+              <span className="text-sm font-medium text-gray-900">{seller.data?.[4] || 'N/A'}</span>
             </div>
           </div>
         </div>

@@ -143,60 +143,6 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
       setLoading(false);
     }
   }
-
-  const renderOverviewTab = () => (
-    <div className="space-y-6">
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard title="My Orders" value={orders.length.toString()} icon="🛒" />
-        <StatCard title="Escrow Transactions" value={escrows.length.toString()} icon="🔄" />
-        <StatCard title="Available Products" value={products.length.toString()} icon="📦" />
-        <StatCard title="Total Spent" value={`${orders.reduce((sum, order) => sum + Number(formatEther(BigInt(order.totalAmount))), 0).toFixed(4)} ETH`} icon="💰" />
-      </div>
-
-      {/* Recent Orders */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Orders</h3>
-        <div className="space-y-3">
-          {orders.slice(0, 3).map((order) => (
-            <div key={order.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <span className="text-lg">📦</span>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-900">Order #{order.id}</div>
-                  <div className="text-xs text-gray-500">Product ID: {order.productId} • Qty: {order.quantity}</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">{formatEther(BigInt(order.totalAmount))} ETH</div>
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                  order.status === 0 ? 'bg-yellow-100 text-yellow-800' :
-                  order.status === 1 ? 'bg-blue-100 text-blue-800' :
-                  order.status === 2 ? 'bg-purple-100 text-purple-800' :
-                  order.status === 3 ? 'bg-green-100 text-green-800' :
-                  'bg-red-100 text-red-800'
-                }`}>
-                  {order.status === 0 ? 'Pending' :
-                   order.status === 1 ? 'Paid' :
-                   order.status === 2 ? 'Fulfilled' :
-                   order.status === 3 ? 'Completed' : 'Cancelled'}
-                </span>
-              </div>
-            </div>
-          ))}
-          {orders.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              <span className="text-4xl mb-2 block">🛒</span>
-              <p>No orders yet</p>
-              <p className="text-sm">Start shopping to see your orders here</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
   
   const renderOrdersTab = () => (
     <div className="space-y-6">
@@ -436,8 +382,6 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
   // Render content based on active tab
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'overview':
-        return renderOverviewTab();
       case 'orders':
         return renderOrdersTab();
       case 'escrows':
@@ -445,7 +389,7 @@ export function BuyerDashboard({ activeTab }: BuyerDashboardProps) {
       case 'settings':
         return renderSettingTab();
       default:
-        return renderOverviewTab();
+        return renderOrdersTab();
     }
   };
   

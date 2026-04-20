@@ -42,9 +42,9 @@ export default function Dashboard() {
   const getRoleTabs = () => {
     switch (userRole) {
       case 'ADMIN':
-        return ['escrows', 'disputes', 'sellers', 'orders', 'settings', 'emergency'];
+        return ['overview', 'escrows', 'disputes', 'sellers', 'orders', 'settings', 'emergency'];
       case 'SELLER':
-        return ['products', 'orders', 'escrows', 'store'];
+        return ['overview', 'products', 'orders', 'escrows', 'settings'];
       case 'BUYER':
         return ['overview', 'orders', 'escrows', 'settings'];
       default:

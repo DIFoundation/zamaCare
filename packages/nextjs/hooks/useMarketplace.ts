@@ -207,7 +207,7 @@ export function useMarketplace() {
     (params: {
       name: string;
       description: string;
-      price: bigint;
+      price: string;
       stock: bigint;
       ipfsHash: string;
     }) =>

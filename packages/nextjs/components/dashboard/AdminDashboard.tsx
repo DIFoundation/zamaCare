@@ -10,28 +10,28 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ activeTab }: AdminDashboardProps) {
-  const { 
+  const {
     reads: { useDisputeWindow, useAuctionContract, useMarketplace, useOwner: useEscrowOwner, useEscrowCounter, useEscrowById, useEscrowRaw, useBuyerEscrows, useSellerEscrows, useDisputeTimeRemaining, useIsDisputeWindowOpen, useEncryptedAmount },
     writes: { createEscrow, releasePayment, refund, raiseDispute: raiseEscrowDispute, resolveDispute, emergencyWithdraw, setMarketplace, setAuctionContract, transferOwnership: transferEscrowOwnership },
     tx: { hash: escrowTxHash, isPending: isEscrowTxPending, isSuccess: isEscrowTxSuccess }
   } = useEscrow();
 
-  const { 
-    reads: { useProductCount, useOrderCount, useProducts, useProduct, useOrder, useBuyerOrders, useSellerOrders, useSellerProducts, useIsSeller, useSeller, useEncryptedPrice, useEscrowContract, useOwner: useMarketplaceOwner, useEscrowToOrder },  
+  const {
+    reads: { useProductCount, useOrderCount, useProducts, useProduct, useOrder, useBuyerOrders, useSellerOrders, useSellerProducts, useIsSeller, useSeller, useEncryptedPrice, useEscrowContract, useOwner: useMarketplaceOwner, useEscrowToOrder },
     writes: { registerSeller, createProduct, updateProduct, removeProduct, createOrder, fulfillOrder, confirmOrder, cancelOrder, raiseDispute: raiseMarketplaceDispute, onDisputeResolved, setEscrowContract, transferOwnership: transferMarketplaceOwnership },
     tx: { hash: marketplaceTxHash, isPending: isMarketplaceTxPending, isSuccess: isMarketplaceTxSuccess }
   } = useMarketplaceHook();
-  
+
   // State for escrow operations
   const [escrowId, setEscrowId] = useState('');
   const [disputeEscrowId, setDisputeEscrowId] = useState('');
-  
+
   // Hooks for specific escrow data (used when escrowId is provided)
   const escrow = useEscrowRaw(escrowId ? BigInt(escrowId) : BigInt(0));
   const isDisputeWindowOpen = useIsDisputeWindowOpen(escrowId ? BigInt(escrowId) : BigInt(0));
   const getDisputeTimeRemaining = useDisputeTimeRemaining(escrowId ? BigInt(escrowId) : BigInt(0));
-  console.log('time remaining', getDisputeTimeRemaining.data)
-  
+  console.log('time remaining', getDisputeTimeRemaining)
+
   // Global statistics
   const escrowCounter = useEscrowCounter();
   const disputeWindow = useDisputeWindow();
@@ -45,11 +45,24 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
   const [newOwnerAddress, setNewOwnerAddress] = useState('');
   const [newEscrowAddress, setNewEscrowAddress] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   // Emergency withdraw state
   const [emergencyWithdrawTo, setEmergencyWithdrawTo] = useState('');
   const [emergencyWithdrawAmount, setEmergencyWithdrawAmount] = useState('');
-  
+  const [storeName, setStoreName] = useState('');
+  const [storeDescription, setStoreDescription] = useState('');
+
+  const handleRegisterAsSeller = async () => {
+    setLoading(true);
+    try {
+      await registerSeller(storeName, storeDescription);
+    } catch (error) {
+      console.error('Error registering as seller:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGetEscrow = async () => {
     if (!escrowId) return;
     setLoading(true);
@@ -62,7 +75,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       setLoading(false);
     }
   };
-  
+
   const handleResolveDispute = async () => {
     if (!disputeEscrowId) return;
     setLoading(true);
@@ -75,7 +88,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       setLoading(false);
     }
   };
-  
+
   const handleEmergencyWithdraw = async () => {
     if (!emergencyWithdrawTo || !emergencyWithdrawAmount) return;
     setLoading(true);
@@ -89,13 +102,13 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       setLoading(false);
     }
   };
-  
+
   const handleCreateEscrow = async () => {
     // This would need buyer, seller, productId, amount parameters
     // For now, just a placeholder
     console.log('Create escrow function called');
   };
-  
+
   const handleSetEscrowMarketplace = async () => {
     if (!newEscrowAddress) return;
     setLoading(true);
@@ -107,7 +120,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       setLoading(false);
     }
   };
-  
+
   const handleTransferEscrowOwnership = async () => {
     if (!newOwnerAddress) return;
     setLoading(true);
@@ -119,7 +132,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       setLoading(false);
     }
   };
-  
+
   const handleSetEscrowContract = async () => {
     if (!newEscrowAddress) return;
     setLoading(true);
@@ -131,7 +144,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       setLoading(false);
     }
   };
-  
+
   const renderEscrowsTab = () => (
     <div className="space-y-6">
       {/* Escrow Statistics */}
@@ -158,7 +171,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
           </div>
         </div>
       </div>
-      
+
       {/* Browse Escrows */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Browse Escrows</h3>
@@ -201,7 +214,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       </div>
     </div>
   );
-  
+
   const renderDisputesTab = () => (
     <div className="space-y-6">
       {/* Resolve Disputes */}
@@ -226,7 +239,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
           </div>
         </div>
       </div>
-      
+
       {/* Dispute Window Info */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Dispute Window Information</h3>
@@ -240,7 +253,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
           <div className="bg-purple-50 rounded-lg p-4">
             <p className="text-sm font-medium text-purple-600">Time Remaining</p>
             <p className="text-lg font-bold text-purple-900">
-              {getDisputeTimeRemaining ? `${getDisputeTimeRemaining} seconds` : 'N/A'}
+              {getDisputeTimeRemaining?.data && getDisputeTimeRemaining.data > 0 ? `${getDisputeTimeRemaining.data} seconds` : 'N/A'}
             </p>
           </div>
         </div>
@@ -248,20 +261,6 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     </div>
   );
 
-  const [storeName, setStoreName] = useState('');
-  const [storeDescription, setStoreDescription] = useState('');
-
-  const handleRegisterAsSeller = async () => {
-    setLoading(true);
-    try {
-      await registerSeller(storeName, storeDescription);
-    } catch (error) {
-      console.error('Error registering as seller:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
   const renderSettingsTab = () => (
     <div className="space-y-6">
       {/* Create Order */}
@@ -294,7 +293,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
         >
           {loading ? 'Registering...' : 'Register as Seller'}
         </button>
-      </div> 
+      </div>
 
       {/* Marketplace Contract Settings */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -320,7 +319,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
               </button>
             </div>
           </div>
-          
+
           {/* Transfer Marketplace Ownership */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Transfer Marketplace Ownership</label>
@@ -341,7 +340,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
               </button>
             </div>
           </div>
-          
+
           {/* Marketplace Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-orange-50 rounded-lg p-4">
@@ -355,7 +354,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
           </div>
         </div>
       </div>
-      
+
       {/* Escrow Contract Settings */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Escrow Contract Settings</h3>
@@ -380,7 +379,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
               </button>
             </div>
           </div>
-          
+
           {/* Transfer Escrow Ownership */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Transfer Escrow Ownership</label>
@@ -401,7 +400,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
               </button>
             </div>
           </div>
-          
+
           {/* Contract Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-lg p-4">
@@ -417,7 +416,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
       </div>
     </div>
   );
-  
+
   const renderSellersTab = () => {
     // Mock seller data - in real app, this would come from contract
     const mockSellers = [
@@ -471,9 +470,8 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                       {seller.storeName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        seller.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${seller.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
                         {seller.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -564,17 +562,16 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
                       {(Number(order.totalAmount) / 1e18).toFixed(4)} ETH
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        order.status === 0 ? 'bg-yellow-100 text-yellow-800' :
-                        order.status === 1 ? 'bg-blue-100 text-blue-800' :
-                        order.status === 2 ? 'bg-purple-100 text-purple-800' :
-                        order.status === 3 ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${order.status === 0 ? 'bg-yellow-100 text-yellow-800' :
+                          order.status === 1 ? 'bg-blue-100 text-blue-800' :
+                            order.status === 2 ? 'bg-purple-100 text-purple-800' :
+                              order.status === 3 ? 'bg-green-100 text-green-800' :
+                                'bg-red-100 text-red-800'
+                        }`}>
                         {order.status === 0 ? 'Pending' :
-                         order.status === 1 ? 'Paid' :
-                         order.status === 2 ? 'Fulfilled' :
-                         order.status === 3 ? 'Completed' : 'Cancelled'}
+                          order.status === 1 ? 'Paid' :
+                            order.status === 2 ? 'Fulfilled' :
+                              order.status === 3 ? 'Completed' : 'Cancelled'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -623,7 +620,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
             </div>
             <p className="text-xs text-gray-500 mt-2">⚠️ Use only in emergency situations to withdraw specified amount to recipient</p>
           </div>
-          
+
           {/* Create Escrow */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Create Escrow</label>
@@ -641,8 +638,8 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
     </div>
   );
 
-  
-  
+
+
   // Render content based on active tab
   const renderTabContent = () => {
     switch (activeTab) {
@@ -662,7 +659,7 @@ export function AdminDashboard({ activeTab }: AdminDashboardProps) {
         return renderEscrowsTab();
     }
   };
-  
+
   return (
     <div className="space-y-6">
       {renderTabContent()}
